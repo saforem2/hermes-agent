@@ -3,7 +3,7 @@ import '../sdk/apps/index.js'
 
 import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@hermes/ink'
 import { useStore } from '@nanostores/react'
-import { Fragment, memo, type MutableRefObject, useEffect, useMemo, useRef } from 'react'
+import { Fragment, memo, type MutableRefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import { cancelBacktrackPrime } from '../app/backtrackStore.js'
 import { useGateway } from '../app/gatewayContext.js'
@@ -367,6 +367,7 @@ const ComposerPane = memo(function ComposerPane({
   const voicePartial = useStore($voicePartial)
   const T = useT()
   const isBlocked = useStore($isBlocked)
+  const [vimInputMode, setVimInputMode] = useState<'insert' | 'normal'>('insert')
   const sh = (composer.inputBuf[0] ?? composer.input).startsWith('!')
 
   const promptText = composerPromptText(
@@ -378,8 +379,9 @@ const ComposerPane = memo(function ComposerPane({
   )
 
   const promptWidth = composerPromptWidth(promptText)
+  const vimBadgeWidth = ui.vimEnabled ? 7 : 0
   const promptBlank = ' '.repeat(promptWidth)
-  const inputColumns = stableComposerColumns(composer.cols, promptWidth, TERMUX_TUI_MODE)
+  const inputColumns = Math.max(1, stableComposerColumns(composer.cols, promptWidth, TERMUX_TUI_MODE) - vimBadgeWidth)
   // A paste expanded for editing can be taller than the screen: show a window
   // of rows that follows the cursor instead of pushing it off the bottom.
   const inputSel = useStore($inputSelection)
@@ -389,7 +391,6 @@ const ComposerPane = memo(function ComposerPane({
     rows: inputRows,
     scroll: inputScroll
   } = composerViewport(composer.input, inputSel, inputColumns, composer.pasteHint === 'collapse', composer.pagerPageSize)
-
   const inputMouseRef = useRef<null | TextInputMouseApi>(null)
 
   const captureInputDrag = (e: GutterMouseEvent) => {
@@ -409,7 +410,7 @@ const ComposerPane = memo(function ComposerPane({
     }
 
     e.stopImmediatePropagation?.()
-    inputMouseRef.current?.dragAt(e.localRow ?? 0, (e.localCol ?? 0) - promptWidth)
+    inputMouseRef.current?.dragAt(e.localRow ?? 0, (e.localCol ?? 0) - promptWidth - vimBadgeWidth)
   }
 
   // Spacer rows live on a different vertical origin; only the column is
@@ -421,7 +422,7 @@ const ComposerPane = memo(function ComposerPane({
     }
 
     e.stopImmediatePropagation?.()
-    inputMouseRef.current?.dragAt(0, (e.localCol ?? 0) - promptWidth)
+    inputMouseRef.current?.dragAt(0, (e.localCol ?? 0) - promptWidth - vimBadgeWidth)
   }
 
   const endInputDrag = () => inputMouseRef.current?.end()
@@ -511,6 +512,11 @@ const ComposerPane = memo(function ComposerPane({
               position="relative"
               width={Math.max(1, composer.cols - 2)}
             >
+              {ui.vimEnabled && (
+                <Text bold color={vimInputMode === 'normal' ? ui.theme.color.warn : ui.theme.color.ok}>
+                  {vimInputMode === 'normal' ? 'NORMAL ' : 'INSERT '}
+                </Text>
+              )}
               <Box width={promptWidth}>
                 {sh ? (
                   <PromptPrefix color={ui.theme.color.shellDollar} promptText={promptText} width={promptWidth} />
@@ -533,6 +539,7 @@ const ComposerPane = memo(function ComposerPane({
                   onChange={composer.updateInput}
                   onPaste={composer.handleTextPaste}
                   onSubmit={composer.submit}
+                  onVimModeChange={setVimInputMode}
                   placeholder={composerHint(voicePartial, composer.empty, ui.busy ? T.composer.interruptHint : '')}
                   // Exactly the "(and N more toolsets…)" tone. `muted` is a
                   // MID-luminance family tone, so it reads receded on both
@@ -541,6 +548,7 @@ const ComposerPane = memo(function ComposerPane({
                   // toward the resolved surface inherits that wrong polarity.
                   placeholderColor={ui.theme.color.muted}
                   value={composer.input}
+                  vim={ui.vimEnabled}
                   voiceRecordKey={composer.voiceRecordKey}
                 />
                 </Box>
