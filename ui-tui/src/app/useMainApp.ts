@@ -18,7 +18,7 @@ import { WHEEL_SCROLL_STEP } from '../config/limits.js'
 import { RESIZE_COALESCE_MS } from '../config/timing.js'
 import { hasLeadGap, prevRenderedMsg } from '../domain/blockLayout.js'
 import { SECTION_NAMES, sectionMode } from '../domain/details.js'
-import { composeTabTitle, fmtProjectCwdBranch, shortCwd } from '../domain/paths.js'
+import { composeTabTitle, fmtProjectCwdBranch, formatStatusPath, shortCwd } from '../domain/paths.js'
 import { sessionScopedModelArg } from '../domain/slash.js'
 import { type GatewayClient } from '../gatewayClient.js'
 import type { SubagentListResponse } from '../gatewayTypes.js'
@@ -30,7 +30,7 @@ import type {
   SessionCloseResponse,
   TerminalResizeResponse
 } from '../gatewayTypes.js'
-import { useGitBranch } from '../hooks/useGitBranch.js'
+import { useGitStatus } from '../hooks/useGitBranch.js'
 import { pruneVirtualHeightCache, useVirtualHistory } from '../hooks/useVirtualHistory.js'
 import { composerPromptWidth } from '../lib/inputMetrics.js'
 import { appendTranscriptMessage, capTranscriptHistory } from '../lib/messages.js'
@@ -1392,7 +1392,8 @@ export function useMainApp(gw: GatewayClient) {
   const appProgress = useMemo(() => ({ showProgressArea }), [showProgressArea])
 
   const cwd = ui.info?.cwd || process.env.HERMES_CWD || process.cwd()
-  const gitBranch = useGitBranch(cwd)
+  const gitStatus = useGitStatus(cwd)
+  const gitBranch = gitStatus.branch
 
   const appStatus = useMemo(
     () => ({
@@ -1400,6 +1401,9 @@ export function useMainApp(gw: GatewayClient) {
       // it doesn't dominate the bar; the status rule reserves the left-side
       // essentials and truncates this further on narrow terminals.
       cwdLabel: fmtProjectCwdBranch(cwd, gitBranch, ui.info?.project?.name, 28),
+      gitStatus,
+      pathLabel: formatStatusPath(cwd),
+      personality: ui.info?.personality ?? '',
       goodVibesTick,
       lastTurnEndedAt: ui.sid ? lastTurnEndedAt : null,
       sessionStartedAt: ui.sid ? sessionStartedAt : null,
@@ -1419,6 +1423,7 @@ export function useMainApp(gw: GatewayClient) {
     [
       cwd,
       gitBranch,
+      gitStatus,
       goodVibesTick,
       lastTurnEndedAt,
       sessionStartedAt,
