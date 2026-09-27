@@ -4,6 +4,7 @@ import type { MutableRefObject, ReactNode, RefObject, SetStateAction } from 'rea
 
 import type { PasteEvent } from '../components/textInput.js'
 import type { GatewayClient } from '../gatewayClient.js'
+import type { GitStatus } from '../hooks/useGitBranch.js'
 import type {
   BillingCardInfo,
   BillingMutationResponse,
@@ -611,6 +612,9 @@ export interface AppLayoutProgressProps {
 
 export interface AppLayoutStatusProps {
   cwdLabel: string
+  pathLabel: string
+  gitStatus: GitStatus | null
+  personality: string
   goodVibesTick: number
   lastTurnEndedAt: null | number
   sessionStartedAt: null | number
