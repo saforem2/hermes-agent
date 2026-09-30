@@ -699,6 +699,7 @@ export interface AppLayoutStatusProps {
   pathLabel: string
   gitStatus: GitStatus | null
   personality: string
+  repoUrl: string
   goodVibesTick: number
   lastTurnEndedAt: null | number
   sessionStartedAt: null | number
