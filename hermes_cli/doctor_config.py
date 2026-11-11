@@ -265,6 +265,7 @@ def _validate_model_config(config_path, issues: list) -> None:
             valid_provider_ids.add(normalize(known_provider))
         except Exception:
             continue
+    provider_def = None
     runtime_provider = catalog_provider = provider
     if provider and provider not in {"auto", "custom"}:
         if resolve_auth is not None:
@@ -290,6 +291,10 @@ def _validate_model_config(config_path, issues: list) -> None:
     if policy_id == "openai-api" and model_base_url:
         from utils import base_url_host_matches
         accepts_vendor_slug = accepts_vendor_slug or not base_url_host_matches(model_base_url, "api.openai.com")
+    # User-configured providers (providers: in config.yaml) own their model namespace,
+    # so vendor/model slugs are valid there (e.g. llm-rosetta -> alcf-minerva/*, alcf-sophia/*).
+    if not accepts_vendor_slug and provider_def is not None and getattr(provider_def, "source", "") == "user-config":
+        accepts_vendor_slug = True
     if default_model and "/" in default_model and policy_id and not accepts_vendor_slug:
         check_warn(f"model.default '{default_model}' uses a vendor/model slug but provider is '{provider_raw}'",
                    "(vendor-prefixed slugs belong to aggregators like openrouter)")
